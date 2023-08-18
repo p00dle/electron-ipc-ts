@@ -6,3 +6,5 @@ frontend-react.d.ts
 frontend-react.js
 preload.d.ts
 preload.js
+index.d.ts
+index.js
