@@ -24,11 +24,11 @@ interface BrowserWindow {
 export class BackendIpc<T extends IpcMessages> {
   private electronListeners: Partial<Record<keyof T['frontend'], ElectronEventListener>> = {};
   private listeners: Partial<Record<keyof T['frontend'], EventListener[]>> = {};
-  private browserWindow: BrowserWindow | null = null;
+  private browserWindows: BrowserWindow[] = [];
   private outstandingMessages: Record<string, any[]> = {};
   constructor(private ipcMain: IpcMain = defaultIpcMain) {}
   public provideBrowserWindow(window: BrowserWindow) {
-    this.browserWindow = window;
+    this.browserWindows.push(window);
     for (const channel of Object.keys(this.outstandingMessages)) {
       for (const value of this.outstandingMessages[channel]) {
         window.webContents.send(channel, value);
@@ -65,9 +65,13 @@ export class BackendIpc<T extends IpcMessages> {
       }
     }
   }
-  public send<C extends keyof T['backend']>(channel: C, value: T['backend'][C]): void {
-    if (this.browserWindow) {
-      this.browserWindow.webContents.send(channel as string, value);
+  public send<C extends keyof T['backend']>(channel: C, value: T['backend'][C], browserWindow?: BrowserWindow): void {
+    if (browserWindow) {
+      browserWindow.webContents.send(channel as string, value);
+    } else if (this.browserWindows.length > 0) {
+      for (const win of this.browserWindows) {
+        win.webContents.send(channel as string, value);
+      }
     } else {
       if (!this.outstandingMessages[channel as string]) {
         this.outstandingMessages[channel as string] = [];
