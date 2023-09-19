@@ -10,3 +10,5 @@ index.d.ts
 index.js
 frontend.d.ts
 frontend.js
+standalone.d.ts
+standalone.js
