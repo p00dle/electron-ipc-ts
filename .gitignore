@@ -8,3 +8,5 @@ preload.d.ts
 preload.js
 index.d.ts
 index.js
+frontend.d.ts
+frontend.js
