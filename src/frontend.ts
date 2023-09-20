@@ -21,7 +21,7 @@ const globalWindow = window as unknown as ElectronWindow;
 interface Ipc<T extends IpcMessages> {
   on<C extends keyof T['backend']>(channel: C, listener: EventListener<T['backend'][C]>): void;
   off<C extends keyof T['backend']>(channel: C, listener: EventListener<T['backend'][C]>): void;
-  send<C extends keyof T['frontend']>(channel: C, message: EventListener<T['frontend'][C]>): void;
+  send<C extends keyof T['frontend']>(channel: C, message: T['frontend'][C]): void;
 }
 
 export function frontendIpcFactory<T extends IpcMessages>(window: ElectronWindow = globalWindow): Ipc<T> {
