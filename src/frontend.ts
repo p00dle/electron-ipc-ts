@@ -5,7 +5,7 @@ interface IpcMessages {
   frontend: Record<string, any>;
 }
 
-interface ElectronWindow extends Window {
+interface ElectronWindow {
   ipc: {
     on(channel: string, listener: ElectronEventListener): void;
     off(channel: string, listener: ElectronEventListener): void;
