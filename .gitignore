@@ -12,3 +12,5 @@ frontend.d.ts
 frontend.js
 standalone.d.ts
 standalone.js
+ipc-stub.d.ts
+ipc-stub.js
