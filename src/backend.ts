@@ -25,25 +25,43 @@ export class BackendIpc<T extends IpcMessages> {
   private electronListeners: Partial<Record<keyof T['frontend'], ElectronEventListener>> = {};
   private listeners: Partial<Record<keyof T['frontend'], EventListener[]>> = {};
   private browserWindows: BrowserWindow[] = [];
-  private outstandingMessages: Record<string, any[]> = {};
+  private singleBrowserWindow: BrowserWindow | null = null;
+  private outstandingMessages: [string, any][] = [];
+
   constructor(private ipcMain: IpcMain = defaultIpcMain) {}
+
   public provideBrowserWindow(window: BrowserWindow) {
-    this.browserWindows.push(window);
-    for (const channel of Object.keys(this.outstandingMessages)) {
-      for (const value of this.outstandingMessages[channel]) {
-        window.webContents.send(channel, value);
-      }
+    if (this.singleBrowserWindow) {
+      throw new Error(`Cannot mix single window mode with multiple`);
     }
-    this.outstandingMessages = {};
+    this.browserWindows.push(window);
+    for (const [channel, message] of this.outstandingMessages) {
+      window.webContents.send(channel, message);
+    }
+    this.outstandingMessages = [];
   }
+
+  public provideSingleBrowserWindow(window: BrowserWindow) {
+    if (this.browserWindows.length > 0) {
+      throw new Error(`Cannot mix single window mode with multiple`);
+    }
+    this.singleBrowserWindow = window;
+    for (const [channel, message] of this.outstandingMessages) {
+      window.webContents.send(channel, message);
+    }
+    this.outstandingMessages = [];
+  }
+
   public on<C extends keyof T['frontend']>(channel: C, listener: EventListener<T['frontend'][C]>): Unsubscribe {
     if (!this.listeners[channel] || !Array.isArray(this.listeners[channel])) {
       this.listeners[channel] = [];
     }
     const listeners = this.listeners[channel] as EventListener[];
     if (listeners.length === 0) {
-      const electronEventListener: ElectronEventListener = (event, value) =>
+      const electronEventListener: ElectronEventListener = (event, value) => {
+        if (this.singleBrowserWindow && event.sender !== this.singleBrowserWindow.webContents) return;
         listeners.forEach((listener) => listener(value, event));
+      };
       this.electronListeners[channel] = electronEventListener;
       this.ipcMain.on(channel as string, electronEventListener);
     }
@@ -65,18 +83,16 @@ export class BackendIpc<T extends IpcMessages> {
       }
     }
   }
-  public send<C extends keyof T['backend']>(channel: C, value: T['backend'][C], browserWindow?: BrowserWindow): void {
-    if (browserWindow) {
-      browserWindow.webContents.send(channel as string, value);
+  public send<C extends keyof T['backend']>(channel: C, message: T['backend'][C], browserWindow?: BrowserWindow): void {
+    const window = browserWindow || this.singleBrowserWindow;
+    if (window) {
+      window.webContents.send(channel as string, message);
     } else if (this.browserWindows.length > 0) {
       for (const win of this.browserWindows) {
-        win.webContents.send(channel as string, value);
+        win.webContents.send(channel as string, message);
       }
     } else {
-      if (!this.outstandingMessages[channel as string]) {
-        this.outstandingMessages[channel as string] = [];
-      }
-      this.outstandingMessages[channel as string].push(value);
+      this.outstandingMessages.push([channel as string, message]);
     }
   }
 }
