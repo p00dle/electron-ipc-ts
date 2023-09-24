@@ -14,7 +14,7 @@ interface IpcRenderer {
 type ElectronEventListener = (event: Electron.IpcRendererEvent, value: any) => void;
 type EventListener<T = any> = (value: T, event: Electron.IpcRendererEvent) => void;
 
-interface Ipc<T extends IpcMessages> {
+export interface Ipc<T extends IpcMessages> {
   on<C extends keyof T['backend']>(channel: C, listener: EventListener<T['backend'][C]>): void;
   off<C extends keyof T['backend']>(channel: C, listener: EventListener<T['backend'][C]>): void;
   send<C extends keyof T['frontend']>(channel: C, message: T['frontend'][C]): void;
